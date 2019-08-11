@@ -1,0 +1,138 @@
+3k04 Assignment 2 Packet Specification
+======================================
+    Who to blame: Sean Stel (with the assistance of two fingers of Bourbon)
+
+...............................................................................
+
+The Pacemaker will respond to the following packets from the DCM:
+
+    Request Egram
+    -------------
+    - DCM commands Pacemaker to start sending Egram data packets
+    - contains 4 header bytes 
+    - no data section
+    - structure:
+        k_sync      0x16
+        k_soh       0x01
+        k_egram     0x47    - this is fn_code
+        checksum    0x50    - XOR of previous bytes
+
+    Stop Egram
+    ----------
+    - DCM commands Pacemaker to stop sending Egram data packets
+    - contains 4 header bytes 
+    - no data section
+    - structure:
+        k_sync      0x16
+        k_soh       0x01
+        k_estop     0x62    - this is fn_code
+        checksum    0x75    - XOR of previous bytes
+
+    Receive Parameters (from DCM)
+    -----------------------------
+    - DCM sends parameter update to Pacemaker
+    - contains 4 header bytes and a data section
+    - data section length depends on mode
+    - structure:
+        k_sync      0x16
+        k_soh       0x01
+        k_pparams   0x55    - this is fn_code
+        checksum    0x42    - XOR of previous bytes
+        data bytes          - see data section specification below
+
+    Send Parameters
+    ---------------
+    - DCM commands Pacemaker to send its parameter values to DCM
+    - contains 4 header bytes 
+    - no data section
+    - structure:
+        k_sync      0x16
+        k_soh       0x01
+        k_echo      0x49    - this is fn_code
+        checksum    0x53    - XOR of previous bytes
+
+...............................................................................
+
+Data Section by Mode:
+
+    MODE: VOO
+        PARAMETER                       BYTES
+        -------------------------------------
+        mode                            1
+        lower_rate_limit                1
+        upper_rate_limit                1
+        v_pulse_amplitude_unregulated   2
+        v_pulse_width                   2
+        checksum                        1
+    MODE: AOO
+        PARAMETER                       BYTES
+        -------------------------------------
+        mode                            1
+        lower_rate_limit                1
+        upper_rate_limit                1
+        a_pulse_amplitude_unregulated   2
+        a_pulse_width                   2
+        checksum                        1
+    MODE: VVI
+        PARAMETER                       BYTES
+        -------------------------------------
+        mode                            1
+        lower_rate_limit                1
+        upper_rate_limit                1
+        v_pulse_amplitude_unregulated   2
+        v_pulse_width                   2
+        v_sensitivity                   2
+        v_refractory_period             2
+        hysteresis_rate_limit           1
+        rate_smoothing                  1
+        checksum                        1
+    MODE: AAI
+        PARAMETER                       BYTES
+        -------------------------------------
+        mode                            1
+        lower_rate_limit                1
+        upper_rate_limit                1
+        a_pulse_amplitude_unregulated   2
+        a_pulse_width                   2
+        a_sensitivity                   2
+        a_refractory_period             2
+        pvarp                           2
+        hysteresis_rate_limit           1
+        rate_smoothing                  1
+        checksum                        1
+
+...............................................................................
+
+The mode bytes will represent each pacing mode with the following values:
+
+mode Off - value 0
+mode DDD - value 1
+mode VDD - value 2
+mode DDI - value 3
+mode DOO - value 4
+mode AOO - value 5
+mode AAI - value 6
+mode VOO - value 7
+mode VVI - value 8
+mode AAT - value 9
+mode VVT - value 10
+mode DDDR - value 11
+mode VDDR - value 12
+mode DDIR - value 13
+mode DOOR - value 14
+mode AOOR - value 15
+mode AAIR - value 16
+mode VOOR - value 17
+mode VVIR - value 18
+
+...............................................................................
+
+Notes:
+    ->  We used sync and start of header bytes simply because that is what we 
+        found in srsVVI.
+    ->  For parameters which have an "Off" option, we will include a boolean 
+        byte at the packet index immediately before the parameter value bytes
+        begin. This is so that we don't have to define a value that represents 
+        "Off".
+    ->  Byte order is Big Endian
+
